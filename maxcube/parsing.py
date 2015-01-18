@@ -4,10 +4,17 @@ import binascii
 from pprint import pprint
 from io import BytesIO
 from collections import defaultdict
+import platform
 
+def python_version_int():
+    return int(platform.python_version().replace(".", "")[:2])
 
 def handle_output_H(line):
-    serial, rf_address, firmware_version, *_ = line.decode().strip().split(',')
+    data = line.decode().strip().split(',')     
+    serial = data[0]
+    rf_address = data[1]
+    firmware_version = data[2]
+    
     return {
         'serial': serial,
         'rf_address': rf_address,
@@ -19,7 +26,10 @@ def handle_output_M(line):
     position = 0
     data = {}
     _1, _2, encoded = line.strip().split(b',', 2)
-    decoded = BytesIO(base64.decodebytes(encoded))
+    if python_version_int() >= 30:
+        decoded = BytesIO(base64.decodebytes(encoded))
+    else:
+        decoded = BytesIO(encoded.decode('base64', 'strict'))
 
     # Unknown bytes
     data['?0'] = ord(decoded.read(1))
@@ -58,7 +68,10 @@ def handle_output_M(line):
 def handle_output_C(line):
     data = {}
     prefix, encoded = line.strip().split(b',', 1)
-    decoded = BytesIO(base64.decodebytes(encoded))
+    if python_version_int() >= 30:
+        decoded = BytesIO(base64.decodebytes(encoded))
+    else:
+        decoded = BytesIO(encoded.decode('base64', 'strict'))
     data['data_len'] = ord(decoded.read(1))
     data['rf_address'] = binascii.b2a_hex(decoded.read(3))
     data['type'] = ord(decoded.read(1))
@@ -83,7 +96,10 @@ def handle_output_C(line):
 def handle_output_L(line):
     data = {}
     encoded = line.strip()
-    decoded = BytesIO(base64.decodebytes(encoded))
+    if python_version_int() >= 30:
+        decoded = BytesIO(base64.decodebytes(encoded))
+    else:
+        decoded = BytesIO(encoded.decode('base64', 'strict'))
     data = {}
     while True:
         device = {}
